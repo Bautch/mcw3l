@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="index.css">
+    <link rel="icon" type="image/x-icon" href="/assets/images/icon.webp">
+    <title>mObywatel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+</head>
+
+<body>
+    <p class="logo_text">yObywatel</p>
+
+    <input class="classic_input firstname" placeholder="Imię">
+    <input class="classic_input surname" placeholder="Nazwisko">
+
+    <!-- Add a file input for uploading an image -->
+    <input type="file" class="classic_input image-upload" accept="image/*">
+
+    <input class="classic_input borndate" placeholder="Data DD.MM.RRRR" value="">
+    <input class="classic_input pesel" placeholder="Pesel">
+
+    <button class="go">wejdź</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Set default birthdate
+            const borndateInput = document.querySelector('.classic_input.borndate');
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = '1997';
+            borndateInput.value = `${day}.${month}.${year}`;
+
+            // Set default PESEL
+            const peselInput = document.querySelector('.classic_input.pesel');
+            peselInput.value = `97${day}${month}21454`;
+
+            // Handle image upload and save to localStorage
+            const imageUploadInput = document.querySelector('.image-upload');
+            imageUploadInput.addEventListener('change', function (event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const imageDataUrl = e.target.result;
+                        storeImageInIndexedDB(imageDataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            function storeImageInIndexedDB(imageDataUrl) {
+                console.log("Storing image in IndexedDB:", imageDataUrl);
+
+                const request = indexedDB.open("PWAStorage", 1);
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains("images")) {
+                        db.createObjectStore("images", { keyPath: "id" });
+                        console.log("Object store 'images' created.");
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction("images", "readwrite");
+
+                    transaction.onerror = (err) => {
+                        console.error("Transaction error:", err);
+                    };
+
+                    const store = transaction.objectStore("images");
+                    const putRequest = store.put({ id: "profileImage", data: imageDataUrl });
+
+                    putRequest.onsuccess = () => {
+                        console.log("Image stored successfully in IndexedDB.");
+                    };
+
+                    putRequest.onerror = (err) => {
+                        console.error("Error storing image in IndexedDB:", err);
+                    };
+                };
+
+                request.onerror = (err) => {
+                    console.error("Error opening IndexedDB:", err);
+                };
+            }
+
+
+            // Handle button click to pass parameters via URL
+            document.querySelector(".go").addEventListener('click', () => {
+                const firstname = document.querySelector(".firstname").value;
+                const surname = document.querySelector(".surname").value;
+                const borndate = document.querySelector(".borndate").value;
+                const pesel = document.querySelector(".pesel").value;
+
+                const params = new URLSearchParams();
+                params.set("firstname", firstname);
+                params.set("surname", surname);
+                params.set("borndate", borndate);
+                params.set("pesel", pesel);
+
+                location.href = "/yObywatel/id?" + params.toString();
+            });
+        });
+    </script>
+</body>
+
+</html>
